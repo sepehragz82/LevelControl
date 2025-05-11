@@ -3,33 +3,40 @@
 #include <delay.h>
 
 // Declare your global variables here
-long ovtimer=0;
-long timer=0;
-long pulses=0;
-char pulse [16];
-int rising=1;
+long ovtimer = 0;
+long timer = 0;
+
+long pulses = 0;
+int rising = 1;
+
+char pulse[16];
 float distance = 0;
 long speed = 0;
 // External Interrupt 1 service routine
 
 interrupt [EXT_INT1] void ext_int1_isr(void) {
     // Place your code here
-    if (rising == 1) {
+    if (rising) {
         TCNT0 = 0;
         ovtimer = 0;
-        timer = 0;
+        
+        // ready for falling edge
         MCUCR = (1<<ISC11) | (0<<ISC10) | (0<<ISC01) | (0<<ISC00);
     }
     else {
         timer = TCNT0;
         pulses = (ovtimer * 256) + timer;
         distance = ((float)pulses / 2) * 343 / 10000 / 2;
+        
+        //UART
         sprintf(pulse,"%2.2f",distance);
         puts(pulse);
         puts("\r\n"); 
+        
+        // ready for rising edge
         MCUCR = (1<<ISC11) | (1<<ISC10) | (0<<ISC01) | (0<<ISC00);
     }
-    rising = !rising;
+    rising = 1 - rising;
 }
 
 // Standard Input/Output functions
@@ -53,7 +60,7 @@ interrupt [TIM0_OVF] void timer0_ovf_isr(void) {
 
 // Read the AD conversion result
 unsigned int read_adc (unsigned char adc_input) {
-    ADMUX=adc_input | ADC_VREF_TYPE;
+    ADMUX = adc_input | ADC_VREF_TYPE;
     // Delay needed for the stabilization of the ADC input voltage
     delay_us(10);
     // Start the AD conversion
